@@ -5,8 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-// import { db } from "./firebase"; // Future Backend Connection
-
+import { db } from "./firebase"; // Future Backend Connection
+import { collection, onSnapshot, query, orderBy, addDoc } from "firebase/firestore";
 export default function PantryGhost() {
   const [ingredients, setIngredients] = useState<string[]>([]);
   const [input, setInput] = useState("");
@@ -14,12 +14,30 @@ export default function PantryGhost() {
   const [isSummoning, setIsSummoning] = useState(false);
 
   // FRONTEND LOGIC: Add local ingredient
-  const addIngredient = () => {
+  const addIngredient = async() => {
     if (input.trim()) {
-      setIngredients([...ingredients, input.trim()]);
-      setInput("");
+      // setIngredients([...ingredients, input.trim()]);
+      // setInput("");
+      try{
+        await addDoc(collection(db, "pantry"), {// waiting for backend connection to add ingredient to firestore
+          name: input.trim(), // add ingredient name to firestore
+          createdAt: new Date() // add timestamp to firestore
+        });
+        setInput(""); 
+      } catch (e) {
+        console.error("Error adding ingredient: ", e);
+      }
     }
   };
+
+  useEffect(() => {
+  const q = query(collection(db, "pantry"), orderBy("createdAt", "desc"));
+  const unsubscribe = onSnapshot(q, (querySnapshot) => {
+    const items = querySnapshot.docs.map(doc => doc.data().name);
+    setIngredients(items);
+  });
+  return () => unsubscribe(); // Cleanup connection on unmount
+}, []);
 
   return (
     <div className="flex h-screen bg-zinc-50 font-sans text-zinc-900">
